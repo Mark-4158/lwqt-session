@@ -36,9 +36,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     pkg_search_module(PROCPS REQUIRED libprocps)
 endif()
 
-# Please don't move, must be after lxqt
-find_package(XdgUserDirs REQUIRED)
-
 # Patch Version
 set(LXQT_SESSION_PATCH_VERSION 1)
 
@@ -60,21 +57,21 @@ add_subdirectory(lxqt-leave)
 # merged from lxqt-common
 include(LXQtConfigVars)
 
-# startlxqt script
+# startlwqt script
 set(PREDEF_XDG_DATA_DIRS "$XDG_DATA_HOME")
 if(NOT("${LXQT_DATA_DIR}" MATCHES "^/usr(/local)?/share$"))
     set(PREDEF_XDG_DATA_DIRS "${PREDEF_XDG_DATA_DIRS}:${LXQT_DATA_DIR}")
 endif()
 set(PREDEF_XDG_DATA_DIRS "${PREDEF_XDG_DATA_DIRS}:/usr/local/share:/usr/share")
 set(PREDEF_XDG_CONFIG_DIRS "/etc:${LXQT_ETC_XDG_DIR}:/usr/share")
-configure_file(startlxqt.in startlxqt @ONLY)
+configure_file(startlxqt.in startlwqt @ONLY)
 install(PROGRAMS
-    "${CMAKE_CURRENT_BINARY_DIR}/startlxqt"
+    "${CMAKE_CURRENT_BINARY_DIR}/startlwqt"
     DESTINATION "${CMAKE_INSTALL_BINDIR}"
     COMPONENT Runtime
 )
 install(FILES
-    startlxqt.1
+    startlwqt.1.gz
     DESTINATION "${CMAKE_INSTALL_MANDIR}/man1"
     COMPONENT Runtime
 )

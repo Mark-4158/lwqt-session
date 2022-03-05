@@ -28,6 +28,6 @@
 #ifndef _NUMLOCK_H_
 #define _NUMLOCK_H_
 
-void enableNumlock();
+#define enableNumlock() {}
 
 #endif

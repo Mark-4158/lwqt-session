@@ -26,7 +26,6 @@ set(lxqt-sessioncfg_SRCS
     autostartutils.cpp
     environmentpage.cpp
     userlocationspage.cpp
-    ../lxqt-session/src/windowmanager.cpp
 )
 
 set(lxqt-sessioncfg_UI_FILES

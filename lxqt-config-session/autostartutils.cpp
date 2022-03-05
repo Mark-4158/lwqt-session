@@ -23,7 +23,7 @@
 
 bool AutostartUtils::showOnlyInLXQt(const XdgDesktopFile &file)
 {
-    return file.value(QLatin1String("OnlyShowIn")) == QLatin1String("LXQt;");
+    return file.value(QL1S("OnlyShowIn")).toStringList().contains(QL1S("LWQt"));
 }
 
 bool AutostartUtils::isLXQtModule(const XdgDesktopFile& file)
