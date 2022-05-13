@@ -41,15 +41,11 @@
 #include <QDir>
 #include <QFileSystemWatcher>
 #include <QDateTime>
-#include "wmselectdialog.h"
-#include "windowmanager.h"
 #include <wordexp.h>
 #include "log.h"
 
 #include <KWindowSystem/KWindowSystem>
 #include <KWindowSystem/netwm.h>
-
-#include <QX11Info>
 
 #define MAX_CRASHES_PER_APP 5
 
@@ -60,9 +56,7 @@ using namespace LXQt;
  */
 LXQtModuleManager::LXQtModuleManager(QObject* parent)
     : QObject(parent),
-      mWmProcess(new QProcess(this)),
       mThemeWatcher(new QFileSystemWatcher(this)),
-      mWmStarted(false),
       mTrayStarted(false),
       mWaitLoop(nullptr)
 {
@@ -73,18 +67,13 @@ LXQtModuleManager::LXQtModuleManager(QObject* parent)
     mProcReaper.start();
 }
 
-void LXQtModuleManager::setWindowManager(const QString & windowManager)
-{
-    mWindowManager = windowManager;
-}
-
 void LXQtModuleManager::startup(LXQt::Settings& s)
 {
     // The lxqt-confupdate can update the settings of the WM, so run it first.
     startConfUpdate();
 
     // Start window manager
-    startWm(&s);
+    Q_UNUSED(s);
 
     startAutostartApps();
 
@@ -174,45 +163,6 @@ void LXQtModuleManager::themeChanged()
         mCurrentThemePath = lxqtTheme.currentTheme().path();
         mThemeWatcher->addPath(mCurrentThemePath);
     }
-}
-
-void LXQtModuleManager::startWm(LXQt::Settings *settings)
-{
-    // if the WM is active do not run WM.
-    // all window managers must set their name according to the spec
-    if (!QString::fromUtf8(NETRootInfo(QX11Info::connection(), NET::SupportingWMCheck).wmName()).isEmpty())
-    {
-        mWmStarted = true;
-        return;
-    }
-
-    if (mWindowManager.isEmpty())
-    {
-        mWindowManager = settings->value(QL1S("window_manager")).toString();
-    }
-
-    // If previuos WM was removed, we show dialog.
-    if (mWindowManager.isEmpty() || ! findProgram(mWindowManager.split(QL1C(' '))[0]))
-    {
-        mWindowManager = showWmSelectDialog();
-        settings->setValue(QL1S("window_manager"), mWindowManager);
-        settings->sync();
-    }
-
-    mWmProcess->start(mWindowManager, QStringList());
-
-    // other autostart apps will be handled after the WM becomes available
-
-    // Wait until the WM loads
-    QEventLoop waitLoop;
-    mWaitLoop = &waitLoop;
-    // add a timeout to avoid infinite blocking if a WM fail to execute.
-    QTimer::singleShot(30 * 1000, &waitLoop, SLOT(quit()));
-    waitLoop.exec();
-    mWaitLoop = nullptr;
-    // FIXME: blocking is a bad idea. We need to start as many apps as possible and
-    //         only wait for the start of WM when it's absolutely needed.
-    //         Maybe we can add a X-Wait-WM=true key in the desktop entry file?
 }
 
 void LXQtModuleManager::startProcess(const XdgDesktopFile& file)
@@ -338,8 +288,6 @@ LXQtModuleManager::~LXQtModuleManager()
         delete p;
         mNameMap[i.key()] = nullptr;
     }
-
-    delete mWmProcess;
 }
 
 /**
@@ -369,28 +317,10 @@ void LXQtModuleManager::logout(bool doExit)
     }
 
     // terminate all possible children except WM
-    mProcReaper.stop({mWmProcess->processId()});
-
-    mWmProcess->terminate();
-    if (mWmProcess->state() != QProcess::NotRunning && !mWmProcess->waitForFinished(2000))
-    {
-        qCWarning(SESSION) << "Window Manager won't terminate ... killing.";
-        mWmProcess->kill();
-    }
+    mProcReaper.stop({});
 
     if (doExit)
         QCoreApplication::exit(0);
-}
-
-QString LXQtModuleManager::showWmSelectDialog()
-{
-    WindowManagerList availableWM = getWindowManagerList(true);
-    if (availableWM.count() == 1)
-        return availableWM.at(0).command;
-
-    WmSelectDialog dlg(availableWM);
-    dlg.exec();
-    return dlg.windowManager();
 }
 
 void LXQtModuleManager::resetCrashReport()
@@ -402,18 +332,6 @@ bool LXQtModuleManager::nativeEventFilter(const QByteArray & eventType, void * /
 {
     if (eventType != "xcb_generic_event_t") // We only want to handle XCB events
         return false;
-
-    if(!mWmStarted && mWaitLoop)
-    {
-        // all window managers must set their name according to the spec
-        if (!QString::fromUtf8(NETRootInfo(QX11Info::connection(), NET::SupportingWMCheck).wmName()).isEmpty())
-        {
-            qCDebug(SESSION) << "Window Manager started";
-            mWmStarted = true;
-            if (mWaitLoop->isRunning())
-                mWaitLoop->exit();
-        }
-    }
 
     if (!mTrayStarted && QSystemTrayIcon::isSystemTrayAvailable() && mWaitLoop)
     {

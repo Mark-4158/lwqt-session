@@ -28,7 +28,6 @@
 #include "basicsettings.h"
 #include "ui_basicsettings.h"
 
-#include "../lxqt-session/src/windowmanager.h"
 #include "sessionconfigwindow.h"
 #include "autostartutils.h"
 
@@ -64,15 +63,6 @@ BasicSettings::~BasicSettings()
 
 void BasicSettings::restoreSettings()
 {
-    QStringList knownWMs;
-    const auto wmList = getWindowManagerList(true);
-    for (const WindowManager &wm : wmList)
-    {
-        knownWMs << wm.command;
-    }
-
-    QString wm = m_settings->value(windowManagerKey, openboxValue).toString();
-    SessionConfigWindow::handleCfgComboBox(ui->wmComboBox, knownWMs, wm);
     m_moduleModel->reset();
 
     ui->leaveConfirmationCheckBox->setChecked(m_settings->value(leaveConfirmationKey, false).toBool());
