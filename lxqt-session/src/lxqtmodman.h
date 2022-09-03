@@ -76,9 +76,6 @@ public:
     LXQtModuleManager(QObject* parent = nullptr);
     ~LXQtModuleManager() override;
 
-    //! \brief Set the window manager (e.g. "/usr/bin/openbox")
-    void setWindowManager(const QString & windowManager);
-
     //! \brief Start a module given its file name (e.g. "lxqt-panel.desktop")
     void startProcess(const QString& name);
 
@@ -106,14 +103,7 @@ signals:
     void moduleStateChanged(QString moduleName, bool state);
 
 private:
-    //! \brief Start Window Manager
-    void startWm(LXQt::Settings *settings);
-    void wmStarted();
-
     void startAutostartApps();
-
-    //! \brief Show Window Manager select dialog
-    QString showWmSelectDialog();
 
     //! \brief Start a process described in a desktop file
     void startProcess(const XdgDesktopFile &file);
@@ -121,14 +111,8 @@ private:
     //! \brief Start the lxqt-confupdate.
     void startConfUpdate();
 
-    //! \brief Window manager command
-    QString mWindowManager;
-
     //! \brief map file names to module processes
     ModulesMap mNameMap;
-
-    //! \brief the window manager
-    QProcess* mWmProcess;
 
     /*! \brief Keep creashes for given process to raise a message in the
         case of repeating crashes
@@ -139,7 +123,6 @@ private:
     QFileSystemWatcher *mThemeWatcher;
     QString mCurrentThemePath;
 
-    bool mWmStarted;
     bool mTrayStarted;
     QEventLoop* mWaitLoop;
 

@@ -30,10 +30,6 @@
 #include <QProcess>
 #include "log.h"
 
-#include <QX11Info>
-// XKB, this should be disabled in Wayland?
-#include <X11/XKBlib.h>
-
 SessionApplication::SessionApplication(int& argc, char** argv) :
     LXQt::Application(argc, argv),
     lockScreenManager(new LockScreenManager(this))
@@ -54,11 +50,6 @@ SessionApplication::SessionApplication(int& argc, char** argv) :
 SessionApplication::~SessionApplication()
 {
     delete modman;
-}
-
-void SessionApplication::setWindowManager(const QString& windowManager)
-{
-    modman->setWindowManager(windowManager);
 }
 
 void SessionApplication::setConfigName(const QString& configName)
@@ -180,21 +171,6 @@ void SessionApplication::loadKeyboardSettings(LXQt::Settings& settings)
 {
   qCDebug(SESSION) << settings.fileName();
     settings.beginGroup(QSL("Keyboard"));
-    XKeyboardControl values;
-    /* Keyboard settings */
-    unsigned int delay = 0;
-    unsigned int interval = 0;
-    if(XkbGetAutoRepeatRate(QX11Info::display(), XkbUseCoreKbd, (unsigned int*) &delay, (unsigned int*) &interval))
-    {
-        delay = settings.value(QSL("delay"), delay).toUInt();
-        interval = settings.value(QSL("interval"), interval).toUInt();
-        XkbSetAutoRepeatRate(QX11Info::display(), XkbUseCoreKbd, delay, interval);
-    }
-
-    // turn on/off keyboard beep
-    bool beep = settings.value(QSL("beep")).toBool();
-    values.bell_percent = beep ? -1 : 0;
-    XChangeKeyboardControl(QX11Info::display(), KBBellPercent, &values);
 
     // turn on numlock as needed
     if(settings.value(QSL("numlock")).toBool())
@@ -215,29 +191,8 @@ void SessionApplication::loadMouseSettings(LXQt::Settings& settings)
     settings.beginGroup(QSL("Mouse"));
 
     // mouse cursor (does this work?)
-    QString cursorTheme = settings.value(QSL("cursor_theme")).toString();
-    int cursorSize = settings.value(QSL("cursor_size")).toInt();
-    QByteArray buf;
-    if(!cursorTheme.isEmpty()) {
-        buf += QBAL("Xcursor.theme:");
-        buf += cursorTheme.toLocal8Bit();
-        buf += QBAL("\n");
-    }
-    if(cursorSize > 0) {
-        buf += QBAL("Xcursor.size:");
-        buf += QByteArray::number(cursorSize);
-        buf += QBAL("\n");
-    }
-    if(!buf.isEmpty()) {
-        buf += QBAL("Xcursor.theme_core:true\n");
-        mergeXrdb(buf.constData(), buf.length());
-    }
-
-    // other mouse settings
-    int accel_factor = settings.value(QSL("accel_factor")).toInt();
-    int accel_threshold = settings.value(QSL("accel_threshold")).toInt();
-    if(accel_factor || accel_threshold)
-        XChangePointerControl(QX11Info::display(), accel_factor != 0, accel_threshold != 0, accel_factor, 10, accel_threshold);
+    lxqt_setenv("XCURSOR_SIZE", settings.value(QSL("cursor_size")).toByteArray());
+    lxqt_setenv("XCURSOR_THEME", settings.value(QSL("cursor_theme")).toByteArray());
 
     // left handed mouse?
     bool left_handed = settings.value(QSL("left_handed"), false).toBool();
@@ -288,44 +243,5 @@ void SessionApplication::loadFontSettings(LXQt::Settings& settings)
 #define DEFAULT_PTR_MAP_SIZE 128
 void SessionApplication::setLeftHandedMouse(bool mouse_left_handed)
 {
-    unsigned char *buttons = nullptr;
-    unsigned char *more_buttons = nullptr;
-    int n_buttons = 0;
-    int i = 0;
-    int idx_1 = 0, idx_3 = 1;
-
-    buttons = (unsigned char*)malloc(DEFAULT_PTR_MAP_SIZE);
-    if (!buttons)
-    {
-        return;
-    }
-    n_buttons = XGetPointerMapping(QX11Info::display(), buttons, DEFAULT_PTR_MAP_SIZE);
-    if (n_buttons > DEFAULT_PTR_MAP_SIZE)
-    {
-        more_buttons = (unsigned char*)realloc(buttons, n_buttons);
-        if (!more_buttons)
-        {
-            free(buttons);
-            return;
-        }
-        buttons = more_buttons;
-        n_buttons = XGetPointerMapping(QX11Info::display(), buttons, n_buttons);
-    }
-
-    for (i = 0; i < n_buttons; i++)
-    {
-        if (buttons[i] == 1)
-            idx_1 = i;
-        else if (buttons[i] == ((n_buttons < 3) ? 2 : 3))
-            idx_3 = i;
-    }
-
-    if ((mouse_left_handed && idx_1 < idx_3) ||
-        (!mouse_left_handed && idx_1 > idx_3))
-    {
-        buttons[idx_1] = ((n_buttons < 3) ? 2 : 3);
-        buttons[idx_3] = 1;
-        XSetPointerMapping(QX11Info::display(), buttons, n_buttons);
-    }
-    free(buttons);
+    Q_UNUSED(mouse_left_handed);
 }

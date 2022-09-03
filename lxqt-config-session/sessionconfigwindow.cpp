@@ -33,12 +33,23 @@
 #include <LXQt/Settings>
 
 #include "sessionconfigwindow.h"
-#include "../lxqt-session/src/windowmanager.h"
 #include "basicsettings.h"
 #include "autostartpage.h"
 #include "environmentpage.h"
 #include "userlocationspage.h"
 
+static bool findProgram(QString program)
+{
+    program.prepend(QDir::separator());
+
+    for(const QString &dir : QFile::decodeName(qgetenv("PATH")).split(QSL(":")))
+    {
+        if (QFileInfo(dir + program).isExecutable())
+            return true;
+    }
+
+    return false;
+}
 
 SessionConfigWindow::SessionConfigWindow() :
       LXQt::ConfigDialog(tr("LXQt Session Settings"), new LXQt::Settings(QSL("session")), nullptr)
